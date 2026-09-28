@@ -1,0 +1,62 @@
+{
+  "up_hint": [
+    0,
+    0,
+    1
+  ],
+  "forward_hint": [
+    0,
+    -1,
+    0
+  ],
+  "calibration_start": 3.0,
+  "calibration_end": 18.0,
+  "calibration_half_width": 2.0,
+  "floor_height_limits": [
+    -3.0,
+    -0.5
+  ],
+  "floor_cell": 0.25,
+  "floor_tolerance": 0.045,
+  "floor_min_cells": 80,
+  "floor_min_fraction": 0.3,
+  "floor_min_span": 9.0,
+  "floor_max_tilt_deg": 15.0,
+  "ransac_iterations": 180,
+  "calibration_center_limit": 0.8,
+  "profile_bin": 0.035,
+  "profile_min_points": 3,
+  "profile_quantile": 80,
+  "rail_height_limits": [
+    0.055,
+    0.3
+  ],
+  "rail_prominence": 0.04,
+  "peak_flank_width": 0.35,
+  "peak_nearest_observation": 0.055,
+  "rail_band": 0.1,
+  "rail_voxel": 0.025,
+  "gauge_limits": [
+    1.2,
+    1.85
+  ],
+  "gauge_tolerance": 0.14,
+  "window_length": 3.0,
+  "local_floor_height_limits": [
+    -0.55,
+    0.65
+  ],
+  "local_floor_max_shift": 0.35,
+  "local_floor_max_slope": 0.18,
+  "local_floor_min_bins": 18,
+  "search_half_width": 1.7,
+  "association_limit": 0.3,
+  "ambiguity_margin": 0.08,
+  "max_heading_deg": 18.0,
+  "seed": 42,
+  "max_range": 80.0,
+  "head_half_width": 0.085,
+  "head_below": 0.055,
+  "head_above": 0.035,
+  "max_missing_sections": 2
+}
