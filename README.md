@@ -16,16 +16,25 @@ docker build -t obstacle_detector .
 Полный пайплайн с видео. Папка с записью монтируется только для чтения,
 папка для результатов — на запись:
 
-```powershell
+```powershel
 docker run --rm `
-  -v D:\input:/data:ro `                          # 1. Монтируем входные данные (защита от записи)
-  -v D:\output:/output `                          # 2. Монтируем папку для результатов
-  obstacle_detector `                             # 3. Имя образа
-  run.py /data/example.db3 `                      # 4. Путь к файлу ВНУТРИ контейнера (начинается с /)
-      --visualize `                               # 5. Включить создание видео
-      --output-dir /output/recording `            # 6. Папка для сохранения ВНУТРИ контейнера
-      --workers 4                                 # 7. Количество процессов отрисовки
+  -v D:\input:/data:ro `
+  -v D:\output:/output `
+  obstacle_detector `
+  run.py /data/example.db3 `
+      --visualize `
+      --output-dir /output/recording `
+      --workers 4
 ```
+| Часть команды | Назначение |
+|--------------|------------|
+| `-v D:\input:/data:ro` | Монтировать папку `D:\input` с вашего ПК как `/data` внутри контейнера (только чтение, защита от записи) |
+| `-v D:\output:/output` | Монтировать папку `D:\output` с вашего ПК как `/output` внутри контейнера (чтение и запись) |
+| `obstacle_detector` | Имя Docker-образа для запуска |
+| `run.py /data/example.db3` | Запустить скрипт `run.py` с файлом `/data/example.db3` (путь внутри контейнера) |
+| `--visualize` | Включить создание видео с визуализацией |
+| `--output-dir /output/recording` | Сохранить результаты в папку `/output/recording` внутри контейнера |
+| `--workers 4` | Использовать 4 процесса для параллельной отрисовки кадров |
 
 До запуска:
 ```text
