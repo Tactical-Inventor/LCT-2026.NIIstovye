@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+*.db3
+*.npy
+*.npz
+result/
+output/
+*.mp4
+*.png
+*.csv
+*.json
