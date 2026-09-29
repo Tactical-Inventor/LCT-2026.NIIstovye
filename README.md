@@ -19,14 +19,6 @@ Docker-образ использует **Ubuntu 22.04, ROS 2 Humble и Python 3.
 
 Распакуйте исходный код целиком, включая служебные файлы. Перейдите в каталог, содержащий `Dockerfile`, `run.py`, `package.xml` и папку `obstacle_detector_ros`. Команды сборки выполняются из этого каталога.
 
-Проверьте доступность Docker:
-
-```text
-docker info --format "{{.OSType}}"
-```
-
-Ожидаемый ответ — `linux`. При ошибке подключения сначала запустите Docker Engine / Docker Desktop.
-
 В Windows приведённые команды выполняются в **PowerShell**. В Linux используется **Bash**. Выберите соответствующие примеры и выполняйте их последовательно в одном терминале, чтобы сохранить значения переменных.
 
 ## 2. Входные данные
@@ -122,12 +114,7 @@ docker run --rm --name obstacle-detector-check -v "${cloudDir}:/data:ro" -v "${r
 
 Каждая команда запуска приведена одной строкой. `max_frames:=0` означает обработку всей записи. Для короткой проверки задайте нужное количество кадров, например `max_frames:=100`. Для папки записи или отдельного NPY/NPZ замените значение `input` соответствующим путём внутри `/data`.
 
-Во втором терминале, пока обработка выполняется, можно проверить ноды и топики:
 
-```text
-docker exec obstacle-detector-check /entrypoint.sh ros2 node list --no-daemon
-docker exec obstacle-detector-check /entrypoint.sh ros2 topic list -t --no-daemon
-```
 
 | Топик | Тип сообщения | Содержимое |
 |---|---|---|
