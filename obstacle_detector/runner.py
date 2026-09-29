@@ -27,28 +27,31 @@ def process_recording(source_path, output_dir, *, topic=None, visualize=False,
     Optional rendering receives completed results and never changes inference.
     Frames and render jobs use bounded memory; full clouds are not cached on disk.
     """
+    print("Внимание: начальная инициализация может занять время (компиляция Numba, загрузка моделей и т.д.).", flush=True)
+
     source_path, output_dir = Path(source_path).resolve(), Path(output_dir).resolve()
     if max_frames < 0 or not np.isfinite(fps) or fps <= 0 or not 1 <= workers <= 8:
         raise ValueError('Use max_frames >= 0, fps > 0 and workers in 1..8')
     if output_dir.exists() and any(output_dir.iterdir()):
         raise FileExistsError(f'Choose an empty output directory: {output_dir}')
+
     processor = StreamProcessor(config, gauge_config)
     started = time.perf_counter()
     counts = Counter()
     first_blocked = None
+
     with ExitStack() as stack:
         source = stack.enter_context(FrameSource(source_path, topic=topic))
         count = min(len(source), max_frames) if max_frames else len(source)
         if count == 0:
             raise ValueError('The input contains no frames')
+
         visualizer = video = None
         if visualize:
-            # Pillow and FFmpeg are loaded only when visualization is requested.
             from .visualization import FrameVisualizer
             from .visualization.video import VideoWriter
             from .visualization.layout import bev_axis
             visualizer = FrameVisualizer(fps=fps, font=font, font_bold=font_bold)
-            # Fix the BEV scale for the recording, including its most distant returns.
             limit = 0.
             last_progress = time.monotonic()
             print(f'BEV extent: scanning {count} frames', flush=True)
@@ -58,6 +61,7 @@ def process_recording(source_path, output_dir, *, topic=None, visualize=False,
                     print(f'BEV extent: {index + 1}/{count}', flush=True)
                     last_progress = time.monotonic()
             visualizer.bev_limit = limit
+
         output_dir.mkdir(parents=True, exist_ok=True)
         if visualize and source.single is None:
             video = stack.enter_context(VideoWriter(output_dir / 'video.mp4', fps=fps,
@@ -65,20 +69,34 @@ def process_recording(source_path, output_dir, *, topic=None, visualize=False,
         csv_file = stack.enter_context((output_dir / 'frames.csv').open('x', newline='', encoding='utf-8-sig'))
         writer = csv.DictWriter(csv_file, fieldnames=CSV_FIELDS)
         writer.writeheader()
+
         last_progress = time.monotonic()
         for index in range(count):
             frame = source.read(index)
             xyz = frame.xyz.astype(np.float64, copy=False)
             result = processor.process(xyz, frame.ring, frame.timestamp_ns)
+
+            # === ОБНОВЛЕННЫЙ ВЫВОД ===
+            if index == 0:
+                time_to_first = time.perf_counter() - started
+                print(f"Первый кадр получен через {time_to_first:.2f} с (включая инициализацию)", flush=True)
+            else:
+                process_time_ms = result.timing_ms.get('total', 0.0)
+                # end='\r' перезаписывает текущую строку, создавая эффект обновления прогресса
+                print(f"Кадр {index + 1}/{count} | {result.status} | Обработка: {process_time_ms:.2f} мс", flush=True, end='\r')
+            # =========================
+
             writer.writerow(dict(frame_idx=index, timestamp_ns=frame.timestamp_ns,
                 status=result.status, path_clear=result.path_clear, distance_m=result.distance_m,
                 confidence=result.confidence, blocking_ids=';'.join(str(t.id) for t in result.blocking),
                 caution_ids=';'.join(str(t.id) for t in result.tracks if t.decision == 'CAUTION'),
                 travel_m=result.travel_m, route_available=result.geometry is not None,
-                elapsed_ms=result.timing_ms['total']))
+                elapsed_ms=result.timing_ms.get('total', 0.0)))
+
             counts[result.status] += 1
             if result.status == 'BLOCKED' and first_blocked is None:
                 first_blocked = index
+
             if visualizer is not None:
                 payload = visualizer.prepare(xyz, result, frame_idx=index, frames_total=count,
                     recording_label=source_path.stem, timestamp_ns=frame.timestamp_ns,
@@ -87,18 +105,22 @@ def process_recording(source_path, output_dir, *, topic=None, visualize=False,
                     visualizer.render_payload(payload).save(output_dir / 'frame.png')
                 else:
                     video.add(payload)
-            if index == 0 or time.monotonic() - last_progress >= 15 or index + 1 == count:
+
+            # Оставили только flush для безопасности записи на диск, убрали лишний print
+            if time.monotonic() - last_progress >= 15 or index + 1 == count:
                 csv_file.flush()
-                print(f'Processed {index + 1}/{count}: {result.status}; '
-                      f'{time.perf_counter() - started:.1f}s', flush=True)
                 last_progress = time.monotonic()
-        # ExitStack finishes the queued video frames and closes the encoder here.
+
+        # Перенос строки после завершения цикла, чтобы курсор перешел на новую строку после последнего '\r'
+        print(flush=True)
+
     summary = dict(version=__version__, input=str(source_path), topic=source.topic,
         frames=count, status_counts={s: counts[s] for s in ('BLOCKED', 'CAUTION', 'CLEAR')},
         first_blocked_frame=first_blocked, elapsed_s=time.perf_counter() - started,
         config=asdict(processor.config), gauge_config=asdict(processor.gauge_decision.config),
         visualization=('video.mp4' if video is not None else 'frame.png') if visualize else None,
         video_fps=fps if video is not None else None, complete=True)
+
     (output_dir / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
     print(f'Complete: {output_dir} | {dict(counts)}', flush=True)
     return summary
@@ -121,10 +143,12 @@ def main():
     parser.add_argument('--font-bold', type=Path, help='Optional bold TTF; specify together with --font')
     parser.add_argument('--version', action='version', version=f'obstacle_detector {__version__}')
     args = parser.parse_args()
+
     if args.max_frames < 0 or not np.isfinite(args.fps) or args.fps <= 0 or not 1 <= args.workers <= 8:
         parser.error('Use --max-frames >= 0, --fps > 0 and --workers in 1..8')
     if (args.font is None) != (args.font_bold is None):
         parser.error('Specify both --font and --font-bold')
+
     try:
         config = Config(threads=args.threads, rise_m=args.rise_m,
                         min_unique=args.min_unique, self_return_m=args.self_return_m)

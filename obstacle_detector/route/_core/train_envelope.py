@@ -2,8 +2,8 @@
 from __future__ import annotations
 import numpy as np
 
-WIDTH = 2.3
-HEIGHT = 2.4
+WIDTH = 2.1
+HEIGHT = 3.0
 VERSION = 'sensor_origin_envelope_v1'
 
 
