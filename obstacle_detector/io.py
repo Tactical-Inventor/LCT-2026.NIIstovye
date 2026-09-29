@@ -17,6 +17,11 @@ class Frame:
 
 def decode_pointcloud(raw, typestore):
     msg = typestore.deserialize_cdr(raw, "sensor_msgs/msg/PointCloud2")
+    return decode_pointcloud_message(msg)
+
+
+def decode_pointcloud_message(msg):
+    """Decode a native ROS or rosbags message, including organized row padding."""
     codes = {1: "i1", 2: "u1", 3: "i2", 4: "u2", 5: "i4", 6: "u4", 7: "f4", 8: "f8"}
     endian = ">" if msg.is_bigendian else "<"
     names, formats, offsets = [], [], []
@@ -107,10 +112,20 @@ class FrameSource:
             raise IndexError(f"frame {index} outside 0..{len(self)-1}")
         if self.single is not None:
             return self.single
-        stamp, part, ident = self.rows[index]
-        raw = self.connections[part].execute("SELECT data FROM messages WHERE id=?", (ident,)).fetchone()[0]
+        stamp, raw = self.read_serialized(index)
         frame = decode_pointcloud(raw, self.typestore)
         return Frame(frame.xyz, frame.ring, stamp, frame.frame_id)
+
+    def read_serialized(self, index=0):
+        """Return recording timestamp and original CDR bytes for ROS publication."""
+        if self.single is not None:
+            raise ValueError("Serialized messages are available only for DB3 inputs")
+        if not 0 <= index < len(self.rows):
+            raise IndexError(f"frame {index} outside 0..{len(self.rows)-1}")
+        stamp, part, ident = self.rows[index]
+        raw = self.connections[part].execute(
+            "SELECT data FROM messages WHERE id=?", (ident,)).fetchone()[0]
+        return stamp, raw
 
     def close(self):
         for db in self.connections:

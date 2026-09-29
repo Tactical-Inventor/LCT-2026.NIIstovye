@@ -1,0 +1,26 @@
+name: ROS 2 Humble
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  docker-and-ros:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Ubuntu 22.04 / Humble and test native ROS topics
+        run: docker build --target test -t obstacle-detector-test .
+      - name: Build runtime image
+        run: docker build -t obstacle-detector:humble .
+      - name: Check installed CLI and launch
+        run: |
+          docker run --rm obstacle-detector:humble run.py --help
+          docker run --rm obstacle-detector:humble
+      - name: Export image for the organizers
+        run: docker save obstacle-detector:humble | gzip > obstacle_detector_humble.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obstacle-detector-humble
+          path: obstacle_detector_humble.tar.gz
+          compression-level: 0
+          retention-days: 7

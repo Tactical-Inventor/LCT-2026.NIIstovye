@@ -1,4 +1,12 @@
 .venv/
+.venv*/
+.pytest_cache/
+.validation/
+build/
+install/
+log/
+*.egg-info/
+*.jsonl
 __pycache__/
 *.pyc
 *.db3

@@ -1,4 +1,13 @@
 .venv/
+.venv*/
+.git/
+.github/
+.pytest_cache/
+.validation/
+build/
+install/
+log/
+*.egg-info/
 __pycache__/
 *.pyc
 *.db3
@@ -10,3 +19,5 @@ output/
 *.png
 *.csv
 *.json
+!obstacle_detector/route/_core/rail_config.json
+*.jsonl
